@@ -56,6 +56,15 @@
       return;
     }
 
+    if (k === "l" || k === "L") {
+      var lr = App.Router.current();
+      if (lr.name !== "lesson") return;          // narration only exists on lesson pages
+      if (!App.Speech || !App.Speech.available()) return;
+      e.preventDefault();
+      App.Speech.toggle();
+      return;
+    }
+
     if (k === "[" || k === "]") {
       var r = App.Router.current();
       if (r.name !== "lesson" && r.name !== "viz") return;

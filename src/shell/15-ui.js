@@ -447,6 +447,59 @@
     { id: "drill", label: "Drill me" }
   ];
 
+  /* Narration bar. Absent entirely when the browser has no speechSynthesis,
+     rather than rendering a button that would do nothing. */
+  function listenBar(teardown) {
+    if (!App.Speech || !App.Speech.available()) return null;
+
+    var ico = h("span", { class: "ico", "aria-hidden": "true" }, "▶");
+    var txt = h("span", null, "Listen");
+    var main = h("button", {
+      class: "btn primary", type: "button",
+      onclick: function () { App.Speech.toggle(); }
+    }, [ico, txt]);
+
+    var back = h("button", { class: "btn icon", type: "button", title: "Previous paragraph",
+      "aria-label": "Previous paragraph", onclick: function () { App.Speech.step(-1); } }, "⏮");
+    var fwd = h("button", { class: "btn icon", type: "button", title: "Next paragraph",
+      "aria-label": "Next paragraph", onclick: function () { App.Speech.step(1); } }, "⏭");
+    var stop = h("button", { class: "btn icon", type: "button", title: "Stop",
+      "aria-label": "Stop narration", onclick: function () { App.Speech.stop(); } }, "■");
+
+    var rate = h("select", { "aria-label": "Speech rate", onchange: function (e) {
+      App.Speech.setRate(parseFloat(e.target.value));
+    } }, [0.75, 1, 1.25, 1.5, 1.75].map(function (r) {
+      return h("option", { value: String(r), selected: r === App.Speech.status().rate }, "×" + r);
+    }));
+
+    var count = h("span", { class: "count" }, "");
+    var bar = h("div", { class: "listen narrow" }, [main, back, fwd, stop, rate, count]);
+
+    function paint(s) {
+      if (s.error) {
+        // Most often: the device has no installed TTS voice for this language.
+        ico.textContent = "⚠";
+        txt.textContent = "Speech unavailable";
+        main.disabled = true;
+        main.title = "This device has no speech voice installed (" + s.error + ")";
+        bar.classList.remove("active");
+        count.textContent = "";
+        return;
+      }
+      var on = s.playing;
+      ico.textContent = on ? "⏸" : "▶";
+      txt.textContent = on ? "Pause" : (s.idx >= 0 ? "Resume" : "Listen");
+      bar.classList.toggle("active", s.idx >= 0);
+      count.textContent = s.total ? (s.idx + 1) + " / " + s.total : "";
+    }
+    paint(App.Speech.status());
+    var off = App.Speech.onChange(paint);
+
+    var prev = teardown.extra;
+    teardown.extra = function () { off(); App.Speech.stop(); if (prev) prev(); };
+    return bar;
+  }
+
   function lessonPage(route, teardown) {
     var l = App.lesson(route.key);
     if (!l) return notFound(route);
@@ -482,6 +535,9 @@
         ])
       ])
     ]));
+
+    var lb = listenBar(teardown);
+    if (lb) kids.push(lb);
 
     /* --- visualizer first (§1) --- */
     var vizHost = h("div", { class: "section", id: "sec-viz", style: { marginTop: "8px" } });
@@ -722,6 +778,7 @@
       ["g then d", "Drill queue"],
       ["[  ]", "Previous / next lesson"],
       ["t", "Toggle theme"],
+      ["l", "Listen to the lesson"],
       ["Space", "Play / pause the visualizer"],
       ["← →", "Step one frame"],
       ["⇧← ⇧→", "Jump ten frames"],
