@@ -57,6 +57,13 @@ export default {
     { type: "code", lang: "python", code: "…" }        // inline mini-snippet inside prose
   ],
 
+  // OPTIONAL but expected wherever the lesson uses jargon. Plain-English
+  // definitions, rendered as a "Jargon decoder" section and read by narration.
+  // A definition must not itself contain undefined jargon.
+  glossary: [
+    { term: "L7 load balancer", plain: "A load balancer that reads the actual HTTP request — the URL, the headers, the cookies — before deciding where to send it." }
+  ],
+
   // complexity table — null if genuinely N/A (e.g., a CAP-theorem lesson)
   complexity: {
     rows: [ { operation: "Search", time: "O(log n)", space: "O(1)", note: "iterative" } ]

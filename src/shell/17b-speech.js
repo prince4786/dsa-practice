@@ -122,7 +122,7 @@
   }
 
   /* ---- segment collection from the rendered page -------------------------- */
-  var SECTION_IDS = ["sec-explainer", "sec-complexity", "sec-interview", "sec-followups"];
+  var SECTION_IDS = ["sec-explainer", "sec-glossary", "sec-complexity", "sec-interview", "sec-followups"];
 
   function rowText(tr) {
     var cells = tr.cells ? Array.prototype.slice.call(tr.cells) : [];
@@ -138,10 +138,14 @@
     SECTION_IDS.forEach(function (id) {
       var sec = doc.getElementById(id);
       if (!sec) return;
-      var nodes = sec.querySelectorAll("h2, h3, p, li, .callout, tbody tr");
+      var nodes = sec.querySelectorAll("h2, h3, p, li, .callout, tbody tr, .glossary dt");
       Array.prototype.forEach.call(nodes, function (n) {
         if (n.closest && (n.closest("pre") || n.closest(".copy"))) return;
-        var raw = n.tagName === "TR" ? rowText(n) : (n.textContent || "");
+        var raw;
+        if (n.tagName === "TR") raw = rowText(n);
+        // A glossary term and its definition are one spoken sentence.
+        else if (n.tagName === "DT") raw = (n.textContent || "") + " means: " + ((n.nextElementSibling && n.nextElementSibling.textContent) || "");
+        else raw = n.textContent || "";
         var t = speechText(raw);
         if (!t || t.length < 2) return;
         chunk(t).forEach(function (c) { segs.push({ el: n, text: c }); });

@@ -440,6 +440,7 @@
   var SECTIONS = [
     { id: "viz", label: "Visualizer" },
     { id: "explainer", label: "Explainer" },
+    { id: "glossary", label: "Jargon" },
     { id: "complexity", label: "Complexity" },
     { id: "code", label: "Code" },
     { id: "interview", label: "Why asked" },
@@ -510,6 +511,7 @@
     var kids = [];
 
     var present = SECTIONS.filter(function (s) {
+      if (s.id === "glossary") return !!(l.glossary && l.glossary.length);
       if (s.id === "complexity") return !!(l.complexity && l.complexity.rows && l.complexity.rows.length);
       if (s.id === "followups") return !!(l.interview && l.interview.followUps && l.interview.followUps.length);
       return true;
@@ -548,6 +550,17 @@
       h("h2", null, "Explainer"),
       h("div", { class: "prose" }, renderExplainer(l.explainer))
     ]));
+
+    /* --- glossary --- */
+    if (l.glossary && l.glossary.length) {
+      kids.push(h("div", { class: "section narrow", id: "sec-glossary" }, [
+        h("h2", null, "Jargon decoder"),
+        h("p", { class: "sub" }, "Every term this lesson uses, in plain English."),
+        h("dl", { class: "glossary" }, l.glossary.map(function (g) {
+          return [md("dt", g.term), md("dd", g.plain)];
+        }))
+      ]));
+    }
 
     /* --- complexity --- */
     if (l.complexity && l.complexity.rows && l.complexity.rows.length) {

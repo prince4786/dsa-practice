@@ -120,6 +120,22 @@
       err("complexity", "is required (use null when genuinely N/A)");
     }
 
+    /* ---- glossary (optional) --------------------------------------------- */
+    /* Plain-English definitions for the jargon a lesson uses. Optional so old
+       lessons keep validating, but every lesson that uses acronyms should have
+       one — unexplained jargon is the main thing that makes these unreadable
+       to someone learning the topic rather than revising it. */
+    if (L.glossary != null) {
+      if (need("glossary", L.glossary, isArr, "{term,plain}[]")) {
+        L.glossary.forEach(function (g, i) {
+          var f = "glossary[" + i + "]";
+          if (!isObj(g)) { err(f, "expected object, got " + type(g)); return; }
+          need(f + ".term", g.term, isStr, "string");
+          need(f + ".plain", g.plain, isStr, "string");
+        });
+      }
+    }
+
     /* ---- interview ------------------------------------------------------- */
     if (need("interview", L.interview, isObj, "object")) {
       need("interview.whyAsked", L.interview.whyAsked, isStr, "string");

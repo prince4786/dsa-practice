@@ -7,45 +7,60 @@ export default {
   tags: ["caching", "lru", "lfu", "ttl", "thundering-herd", "invalidation"],
 
   explainer: [
-    { type: "p", text: "A cache is a bet that the *next* request looks like the *last* one. Everything interesting about caching follows from three questions: **what do you evict**, **when does it go stale**, and **what happens the instant it disappears**." },
+    { type: "p", text: "A cache is just a small, fast copy of some data, kept close to where it's needed, on the bet that whatever gets requested next probably looks like what was requested a moment ago. Think of it like keeping a few frequently-used tools on your workbench instead of walking to the garage for every single one — most of the time the tool you need is already close by, and only occasionally do you have to make the slow trip. Everything interesting about caching comes down to three questions: **what do you throw away when the cache fills up**, **when does a cached copy become too old to trust**, and **what happens to the system the instant a piece of cached data disappears**." },
 
-    { type: "h3", text: "The latency ladder — why caching pays" },
+    { type: "h3", text: "The latency ladder — why caching pays off" },
     { type: "list", items: [
-      "L1 cache reference ≈ **1 ns**; main memory ≈ **100 ns**",
-      "In-process cache hit ≈ **~0.1 µs**; Redis over the network ≈ **0.5–1 ms**",
-      "SSD random read ≈ **100 µs**; a real indexed DB query ≈ **1–10 ms**",
-      "Cross-region round trip ≈ **80–150 ms**"
+      "Reading from the CPU's L1 cache (a tiny, extremely fast memory built into the processor chip itself) takes roughly **1 nanosecond (ns)**; reading from main memory (RAM) takes roughly **100 ns**.",
+      "A cache hit inside your own application process (an \"in-process\" cache — data kept in memory in the same program that needs it) takes roughly **~0.1 microseconds (µs)**; asking Redis (a separate, shared, in-memory database reachable over the network) takes roughly **0.5-1 millisecond (ms)**, because now you're also paying for a network round trip.",
+      "A random read from an SSD takes roughly **100 µs**; a real query against an indexed database table takes roughly **1-10 ms**, because it may involve disk access, query planning, and lock coordination.",
+      "A round trip to a server on the other side of the world (\"cross-region\") takes roughly **80-150 ms**, dominated purely by the speed of light through fiber-optic cable."
     ]},
-    { type: "p", text: "So a Redis hit is roughly **10× faster** than a DB query, and an in-process hit is **1000×** faster. That ratio is why hit rate matters so much: at 90% hit rate with a 1 ms cache and a 10 ms DB, average latency is `0.9×1 + 0.1×10 = 1.9 ms`. Push the hit rate to 99% and it is `1.09 ms`. Drop it to 50% and it is `5.5 ms` — **and your database load has gone up 5×**. The load-shedding effect, not the latency, is usually what saves you." },
+    { type: "p", text: "Put those together and a Redis hit is roughly **10× faster** than a database query, while an in-process hit is roughly **1000× faster**. That gap is why the cache **hit rate** (the fraction of requests a cache can answer without going to the database) matters so much. At a 90% hit rate, with a 1 ms cache and a 10 ms database, the average latency works out to `0.9×1 + 0.1×10 = 1.9 ms`. Push the hit rate to 99% and it drops to `1.09 ms`. Drop it to 50% and it rises to `5.5 ms` — and just as importantly, the database now sees **5× more traffic** than it did at 90%. In practice it's usually that second effect — protecting the database from load, not shaving milliseconds off latency — that actually saves the system during a traffic spike." },
 
-    { type: "h3", text: "Eviction policies" },
+    { type: "h3", text: "Eviction policies — what gets thrown out when the cache is full" },
     { type: "list", items: [
-      "**LRU** — evict the least recently used. Cheap (hash map + doubly-linked list, O(1)), matches real temporal locality. Its failure mode is a **scan**: one full table sweep evicts your entire working set.",
-      "**LFU** — evict the least frequently used. Resists scans, but suffers *cache pollution*: a key that was hot last week keeps a high count forever. Real systems use **windowed/decaying LFU** (TinyLFU, as in Caffeine) — a frequency sketch over a sliding window plus an LRU admission window.",
-      "**FIFO / CLOCK** — cheapest to implement, no per-access bookkeeping; CLOCK approximates LRU with one reference bit and is what OS page caches actually use.",
-      "**Random** — genuinely fine at large scale, and immune to adversarial access patterns. Redis's `allkeys-random` exists for a reason."
-    ]},
-
-    { type: "h3", text: "The three write strategies" },
-    { type: "list", items: [
-      "**Cache-aside (lazy loading)** — app reads cache, misses, reads DB, writes cache. Default choice. Only cached data is ever requested; the cost is a miss penalty on cold data and a race window on concurrent write+fill.",
-      "**Write-through** — write cache and DB together. Cache is never stale, writes are slower, and you cache data nobody may ever read.",
-      "**Write-behind (write-back)** — write cache, flush to DB asynchronously. Fastest writes, absorbs spikes, and **you lose data if the cache dies before the flush**. Only acceptable for tolerant data (counters, view tallies)."
+      "**LRU (Least Recently Used)** — throw away whatever hasn't been touched in the longest time. It's cheap to implement (a hash map plus a doubly-linked list gives O(1) — constant-time — operations) and matches how real traffic tends to behave: recently-used things tend to get used again soon (\"temporal locality\"). Its failure mode is a **scan**: one job that reads through an entire table once, touching every key exactly one time, will evict your whole useful cache contents to make room for data nobody will ask for again.",
+      "**LFU (Least Frequently Used)** — throw away whatever has been requested the fewest times overall. This resists the scan problem, but introduces its own issue called *cache pollution*: a key that was extremely popular last week keeps a high lifetime count and refuses to leave, even though nobody wants it anymore. Real systems fix this with **windowed or decaying LFU** — for example **TinyLFU**, used inside the popular Java caching library **Caffeine** — which keeps a compact frequency estimate over a sliding recent window plus a small LRU-style area to test whether new keys deserve admission at all.",
+      "**FIFO / CLOCK** — FIFO throws away whatever was inserted first, with no bookkeeping on access at all, making it the cheapest option. **CLOCK** is a clever approximation of LRU using just one reference bit per entry (\"has this been touched since we last looked?\") instead of a full recency ordering — it's what operating systems actually use for page caches (the cache that decides which chunks of memory to keep resident versus swap to disk).",
+      "**Random eviction** — simply throw away a random entry. This sounds crude but performs surprisingly well at large scale and, unlike LRU, can't be deliberately gamed by an attacker who knows your access pattern. Redis's `allkeys-random` policy exists precisely because this is a legitimate choice, not just a fallback."
     ]},
 
-    { type: "callout", tone: "pitfall", text: "On a write, **delete the cache entry, don't update it**. Two concurrent writers can interleave their cache updates in the opposite order to their DB commits, leaving the cache permanently wrong. Deleting is idempotent and forces a fresh read." },
-
-    { type: "h3", text: "The three failure modes worth naming" },
+    { type: "h3", text: "The three write strategies — how the cache and the database stay in sync" },
     { type: "list", items: [
-      "**Thundering herd / stampede** — a hot key expires and 5,000 concurrent requests all miss and all hit the database at once. Fixes: **single-flight** (one request fetches, the rest wait on the same promise), a short **mutex/lease** on the key, or **stale-while-revalidate** (serve the expired value while one worker refreshes).",
-      "**Cache penetration** — repeated requests for keys that don't exist bypass the cache entirely and hammer the DB. Fix: cache the negative result with a short TTL, or a **Bloom filter** of existing keys in front.",
-      "**Cache avalanche** — everything you warmed at deploy time has the same TTL and expires in the same second. Fix: **jitter the TTL**, e.g. `ttl × (0.9 + 0.2·random())`."
+      "**Cache-aside (also called lazy loading)** — the application checks the cache first; on a miss, it reads the database and then writes the fresh value into the cache. This is the default choice for most systems: only data that's actually been requested ever ends up cached. The cost is a slower first request for any \"cold\" key, and a race window if two requests miss and refill the same key concurrently.",
+      "**Write-through** — every write goes to the cache and the database together, in the same operation. The cache is never stale, but every write pays the cost of both writes, and you end up caching data that might never be read again.",
+      "**Write-behind (or write-back)** — a write updates the cache immediately and is flushed to the database asynchronously, later. Writes feel instant and the cache can absorb sudden write spikes, but **if the cache dies before that flush happens, the write is gone for good**. Only acceptable for data that can tolerate some loss, like view counters or engagement tallies — never for anything that must be durable."
     ]},
 
-    { type: "h3", text: "Invalidation" },
-    { type: "p", text: "TTL is not invalidation, it is *bounded staleness you chose*. A 60 s TTL means you have agreed to serve data up to 60 s old. Real invalidation needs an event: delete-on-write, a CDC stream off the DB's replication log, or versioned keys (`user:42:v7`) where a bump makes every old key unreachable and it ages out on its own." },
+    { type: "callout", tone: "pitfall", text: "On a write, **delete the cache entry rather than updating it in place**. Here's why: two writers updating the same key concurrently can commit to the database in one order but happen to write to the cache in the opposite order — leaving the cache holding the *older* value forever, with nothing to correct it. Deleting is **idempotent** (doing it once or five times has the same effect), and it simply forces the next read to go fetch a fresh value from the database." },
 
-    { type: "callout", tone: "tip", text: "In an interview, always state your hit-rate assumption and derive the DB load from it. \"At 95% hit rate, 100k rps of reads becomes 5k rps at the database\" is the sentence that shows you understand what a cache is *for*." }
+    { type: "h3", text: "Three failure modes worth naming by name" },
+    { type: "list", items: [
+      "**Thundering herd / cache stampede** — a single very popular (\"hot\") key expires, and thousands of concurrent requests all miss at the exact same instant and all hammer the database simultaneously to refill it. Fixes: **single-flight** (only the very first request that misses actually goes to the database; every other concurrent request for that same key waits on that one in-flight fetch and shares its result), a short-lived lock/lease on the key so only one worker refills it, or **stale-while-revalidate** (keep serving the just-expired value to everyone while exactly one background worker quietly refreshes it).",
+      "**Cache penetration** — repeated requests for keys that simply don't exist (say, someone probing invalid user IDs) never find anything in the cache and always fall through to hit the database directly. Fix: cache the *negative* result too, with a short TTL, or put a **Bloom filter** (a compact, probabilistic data structure that can quickly say \"this key definitely doesn't exist\" or \"this key might exist\" using very little memory) in front to reject obviously-invalid lookups before they ever reach the database.",
+      "**Cache avalanche** — a batch of keys that were all warmed up at the same moment (say, at deploy time) share the same TTL, and therefore all expire in the same second, causing a mass simultaneous miss. Fix: **jitter the TTL** — instead of a fixed expiry, use something like `ttl × (0.9 + 0.2 × random())` so expirations spread out over time instead of landing all at once."
+    ]},
+
+    { type: "h3", text: "Invalidation — TTL is not the same thing" },
+    { type: "p", text: "A **TTL** (Time To Live — how long an entry is allowed to sit in the cache before it's automatically considered expired) is not invalidation. It's *bounded staleness that you have explicitly agreed to accept*: a 60-second TTL means you've decided it's fine for users to sometimes see data up to 60 seconds old. Real invalidation — making sure a cache entry disappears the moment the underlying data actually changes — needs an event to trigger it: deleting the cache entry on every write, a **CDC** (Change Data Capture — a stream of every row-level change read directly off the database's own replication log) pipeline that reacts to changes as they happen, or versioned keys like `user:42:v7`, where bumping the version number simply makes every old key unreachable and it quietly ages out on its own." },
+
+    { type: "callout", tone: "tip", text: "In an interview, always state your hit-rate assumption out loud and derive the resulting database load from it. \"At a 95% hit rate, 100k requests per second of reads becomes only 5k requests per second hitting the database\" is the sentence that shows you understand what a cache is actually *for* — protecting the thing behind it, not just being fast." }
+  ],
+
+  glossary: [
+    { term: "Hit rate", plain: "The fraction of requests a cache can answer directly, without needing to go fetch the data from the slower system (usually a database) behind it." },
+    { term: "L1 cache", plain: "A tiny, extremely fast memory built directly into a CPU chip, used to hold the data the processor is most likely to need next." },
+    { term: "In-process cache", plain: "A cache stored in the memory of the same running program that needs the data, so there's no network hop to read it — the fastest kind of cache, but not shared between different servers." },
+    { term: "TTL (Time To Live)", plain: "How long a cached entry is allowed to sit before it's automatically treated as expired, whether or not the underlying data actually changed." },
+    { term: "LRU (Least Recently Used)", plain: "An eviction policy that throws out whichever cache entry hasn't been accessed in the longest time, on the theory that recently-used things get used again soon." },
+    { term: "LFU (Least Frequently Used)", plain: "An eviction policy that throws out whichever cache entry has been accessed the fewest number of times overall." },
+    { term: "TinyLFU / Caffeine", plain: "TinyLFU is a compact technique for estimating how popular a key has recently been without storing a full history. Caffeine is a popular Java caching library that uses it." },
+    { term: "Cache-aside", plain: "A caching pattern where the application checks the cache first, and on a miss reads the real data source and stores the result in the cache for next time." },
+    { term: "Cache stampede / thundering herd", plain: "The moment a popular cache entry expires and a huge number of requests all miss at once, all trying to refetch the same thing from the database simultaneously." },
+    { term: "Single-flight", plain: "A technique where, if many requests need the same missing piece of data at once, only the first one actually goes and fetches it — the rest simply wait for that one fetch to finish and share its result." },
+    { term: "Bloom filter", plain: "A small, memory-efficient data structure that can quickly tell you 'this definitely isn't in the set' or 'this might be in the set' — used to reject lookups for keys that certainly don't exist before they burden a slower system." },
+    { term: "CDC (Change Data Capture)", plain: "A technique for streaming every change made to a database (inserts, updates, deletes) as it happens, usually by reading the database's own internal replication log, so other systems can react to changes in near real time." }
   ],
 
   complexity: {

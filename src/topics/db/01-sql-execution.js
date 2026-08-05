@@ -7,24 +7,37 @@ export default {
   tags: ["sql", "query-semantics", "aggregation"],
 
   explainer: [
-    { type: "p", text: "SQL is written in the order a human wants to read it (`SELECT` first) and evaluated in the order a machine can actually compute it (`FROM` first). Almost every confusing SQL error — *\"column does not exist\"*, *\"alias not recognised\"*, *\"aggregate not allowed here\"* — is that mismatch biting you." },
-    { type: "h3", text: "The logical order" },
+    { type: "p", text: "When you write a SQL query, you type the clauses in the order that reads naturally to a human — `SELECT` first, because that is the part that says what you actually want to see. But the database does not evaluate the query in that order at all. It cannot decide which columns to show you until it has already gone and found the rows, filtered out the ones you don't want, and possibly grouped them together. So internally, the database works through the query starting from `FROM` — the part that says which table the data comes from — and only reaches `SELECT` near the very end. This mismatch between the order you *write* a query and the order the database *evaluates* it is the source of almost every confusing SQL error you will ever hit: a column that 'does not exist' even though it is sitting right there in your SELECT list, an alias (a temporary nickname you gave a column, like `AS total`) that the database claims not to recognize, or a complaint that you cannot use an aggregate function (a function such as `SUM` or `COUNT` that combines many rows into a single number) in a place you tried to use it. Once you know the real evaluation order, every one of these errors becomes predictable instead of mysterious." },
+    { type: "h3", text: "The logical order — the sequence the database actually thinks in" },
     { type: "list", items: [
-      "**FROM / JOIN** — materialise the source rows. Everything downstream sees only what this produced.",
-      "**WHERE** — filter *rows*. Runs before any grouping, so it cannot see aggregates.",
-      "**GROUP BY** — collapse rows into one row per group. After this point the individual rows are gone; only grouping keys and aggregates survive.",
-      "**HAVING** — filter *groups*. This is where `SUM(x) > 300` belongs.",
-      "**SELECT** — evaluate the projection and assign output aliases. Aliases are born here, which is why `WHERE total > 5` fails but `ORDER BY total` works.",
-      "**DISTINCT** — dedupe the projected rows.",
-      "**ORDER BY** — sort the result; the only clause that can see the `SELECT` aliases and the raw columns.",
-      "**LIMIT / OFFSET** — cut the sorted result. Last, always."
+      "**FROM / JOIN** — gather the source rows first. The technical word for this is that the database *materialises* the rows, meaning it produces the actual working set of rows in memory. Every clause after this one only ever gets to see what this step produced — it can never reach back and grab something FROM didn't include.",
+      "**WHERE** — filter individual *rows*, one at a time, before any grouping happens. Because grouping hasn't happened yet, WHERE has no idea what a SUM or a COUNT even is — you cannot reference an aggregate function here.",
+      "**GROUP BY** — collapse many rows into one row per group. This is a genuine turning point in the query: after this step, the individual rows are gone for good. All that survives is the grouping key (e.g. `region`) and whatever aggregates you computed (e.g. `SUM(amount)`).",
+      "**HAVING** — filter *groups*, not rows, and it runs after GROUP BY. This is the only place `SUM(x) > 300` is allowed to live, because SUM only exists once grouping has happened.",
+      "**SELECT** — actually compute the columns you asked for, and this is the moment column aliases (nicknames given with `AS`) come into existence. That is exactly why `WHERE total > 5` fails — WHERE runs before SELECT, so `total` doesn't exist yet — but `ORDER BY total` works fine, because ORDER BY runs after SELECT.",
+      "**DISTINCT** — remove duplicate rows from whatever SELECT just produced.",
+      "**ORDER BY** — sort the result. It is the only clause that can see both the raw columns and the aliases SELECT just created.",
+      "**LIMIT / OFFSET** — cut the sorted result down to the number of rows you asked for. This always happens last."
     ]},
-    { type: "callout", tone: "tip", text: "The two-sentence answer that lands in interviews: *WHERE filters rows before grouping, HAVING filters groups after. If your predicate mentions an aggregate it must be in HAVING; if it doesn't, put it in WHERE so fewer rows ever reach the grouping.*" },
-    { type: "h3", text: "Why it matters for performance, not just correctness" },
-    { type: "p", text: "The order is *logical*, not physical — the planner is free to reorder anything it can prove is equivalent. But the equivalences it can prove are limited. A predicate you write in `HAVING` that only mentions grouping keys can usually be pushed down into `WHERE` automatically; one that mentions a non-key column often cannot, so the engine groups millions of rows and then throws them away." },
-    { type: "callout", tone: "pitfall", text: "`LIMIT 10` without `ORDER BY` is not \"the first 10 rows\" — it is *ten arbitrary rows*, and the set can change between runs when the plan or physical layout changes. Any pagination built on unordered `LIMIT/OFFSET` will silently skip and duplicate rows." },
-    { type: "h3", text: "Window functions sit between SELECT and ORDER BY" },
-    { type: "p", text: "`ROW_NUMBER() OVER (...)` is evaluated after `HAVING` and before `ORDER BY`/`DISTINCT`. That is why you cannot filter on a window function in `WHERE` or `HAVING` — you must wrap the query in a subquery or CTE and filter outside it. That single fact is the answer to a very common follow-up." }
+    { type: "callout", tone: "tip", text: "The short version that lands well in an interview: *WHERE filters rows before grouping happens; HAVING filters groups after grouping happens. If your condition mentions an aggregate function like SUM or COUNT, it has to go in HAVING. If it doesn't, put it in WHERE instead, so fewer rows ever reach the (more expensive) grouping step.*" },
+    { type: "h3", text: "Why this matters for speed, not just for getting the syntax right" },
+    { type: "p", text: "The order described above is the *logical* order — it describes what answer the query must produce, not literally the steps the database takes to compute it. The query planner (the part of the database that decides how to physically execute your query) is free to reorder or combine steps in any way it can prove gives the same answer, and it often does. But what it can prove is limited. If your `HAVING` condition only mentions columns you already grouped by, the planner can usually rewrite it as an earlier `WHERE` filter automatically, which is cheap. But if your `HAVING` condition mentions a column that isn't part of the grouping key, the planner usually cannot do that rewrite — so it ends up grouping millions of rows together, computing every aggregate, and only then throwing most of the results away. Writing the filter in `WHERE` yourself whenever possible avoids relying on the planner to make that leap." },
+    { type: "callout", tone: "pitfall", text: "`LIMIT 10` without an `ORDER BY` does not mean \"the first 10 rows\" the way it sounds — there is no defined 'first' without a sort order, so it really means *some ten rows, chosen however the database happened to produce them*. Which ten rows you get can change between runs, for instance if the database's internal execution plan changes or the physical layout of the data changes. Any pagination logic built on `LIMIT`/`OFFSET` without a stable `ORDER BY` will end up silently skipping some rows and showing duplicates of others." },
+    { type: "h3", text: "Window functions run in a specific, easy-to-forget spot" },
+    { type: "p", text: "A window function — something like `ROW_NUMBER() OVER (...)`, which numbers or ranks rows without collapsing them the way GROUP BY does — is evaluated after `HAVING` and before `ORDER BY`/`DISTINCT`. Because of that exact position in the order, you cannot write `WHERE rn = 1` or `HAVING rn = 1` to filter on a window function's result — at the time WHERE and HAVING run, the window function hasn't been computed yet. The fix is to wrap the whole query in a subquery or a CTE (a named temporary result set you define with `WITH ... AS (...)`) and apply the filter in an outer query, after the window function has already run. This one fact answers a question interviewers ask constantly." }
+  ],
+
+  glossary: [
+    { term: "clause", plain: "One of the keyword-introduced parts of a SQL query — SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, and so on." },
+    { term: "predicate", plain: "A true/false condition in a query, like `status = 'paid'` — it decides whether a row or group is kept or thrown away." },
+    { term: "aggregate function", plain: "A function like SUM, COUNT, AVG, MIN, or MAX that combines many rows into a single number." },
+    { term: "alias", plain: "A temporary nickname given to a column or table in a query, usually with `AS`, so you can refer to it more conveniently elsewhere in the query." },
+    { term: "materialise", plain: "To actually produce and hold a set of rows in memory or on disk, as opposed to just describing them abstractly." },
+    { term: "query planner / optimiser", plain: "The part of the database that decides the actual physical steps to run a query — which scans, which order, which algorithms — while still producing the answer the logical order requires." },
+    { term: "window function", plain: "A function such as `ROW_NUMBER()` or `RANK()` that computes a value per row using a group of related rows (a 'window'), without collapsing those rows into one the way GROUP BY does." },
+    { term: "CTE (Common Table Expression)", plain: "A named, temporary result set you define at the top of a query with `WITH name AS (...)`, which you can then reference like a table later in the same query." },
+    { term: "top-N heap", plain: "A small, size-limited data structure the database can use to keep only the best N rows seen so far while scanning, instead of sorting the entire result set — much cheaper when you only need the top few rows." },
+    { term: "selectivity", plain: "How much a condition narrows down the rows — a highly selective condition matches very few rows out of the whole table." }
   ],
 
   complexity: {

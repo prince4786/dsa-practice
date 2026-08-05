@@ -264,6 +264,24 @@ td.mono, .mono { font-family: var(--mono); font-size: 12.5px; }
   padding: 8px 14px; border-radius: 99px; font-size: 13px; z-index: 70;
 }
 
+/* ---- glossary ------------------------------------------------------------ */
+.glossary { display: grid; grid-template-columns: minmax(120px, 200px) 1fr; gap: 2px 18px; margin: 0; }
+.glossary dt {
+  font-family: var(--mono); font-size: 13px; color: var(--accent);
+  padding: 7px 0; font-weight: 600;
+}
+.glossary dd {
+  margin: 0; padding: 7px 0; color: var(--text-2); font-size: 14.5px; line-height: 1.55;
+  border-bottom: 1px solid var(--border);
+}
+.glossary dt { border-bottom: 1px solid var(--border); }
+.glossary dt:last-of-type, .glossary dd:last-of-type { border-bottom: 0; }
+@media (max-width: 640px) {
+  .glossary { grid-template-columns: 1fr; gap: 0; }
+  .glossary dt { padding-bottom: 0; border-bottom: 0; }
+  .glossary dd { padding-top: 3px; }
+}
+
 /* ---- listen / narration -------------------------------------------------- */
 .listen { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 .listen .ico { font-family: var(--mono); margin-right: 6px; }
