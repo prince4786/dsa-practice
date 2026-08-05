@@ -1,0 +1,45 @@
+/* ============================================================================
+   00-tokens.css — THE ONLY FILE THAT DEFINES COLOR.
+   Lesson authors never hardcode a colour: canvas/svg code reads these through
+   `env.colors` (token name, camelCased, minus the leading `--`):
+     --viz-1 -> env.colors.viz1        --text-2 -> env.colors.text2
+     --surface-2 -> env.colors.surface2 --bg -> env.colors.bg  ... etc.
+   ========================================================================== */
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;   /* native <select>/scrollbar widgets must follow the app theme, not the OS */
+  --bg: #0d0d0d;  --surface: #1a1a19;  --surface-2: #232322;
+  --text: #ffffff;  --text-2: #c3c2b7;  --muted: #898781;
+  --border: rgba(255,255,255,.10);  --grid: #2c2c2a;  --axis: #383835;
+  --accent: #3987e5;
+  --viz-1: #3987e5;  /* active / current element  */
+  --viz-2: #d95926;  /* comparing / swapping      */
+  --viz-3: #199e70;  /* visited / done / sorted   */
+  --viz-4: #c98500;  /* frontier / candidate      */
+  --viz-5: #d55181;  /* secondary pointer / probe */
+  --viz-6: #008300;  /* accepted / committed      */
+  --viz-7: #9085e9;  /* special / pivot / leader  */
+  --viz-8: #e66767;  /* conflict / error / pruned */
+  --ok: #0ca30c;  --warn: #fab219;  --danger: #d03b3b;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius: 10px;  --radius-sm: 6px;  --gap: 16px;
+
+  /* derived, non-colour layout constants */
+  --sidebar-w: 240px;
+  --content-w: 880px;
+  --wide-w: 1100px;
+  --dur: 140ms;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f9f9f7;  --surface: #fcfcfb;  --surface-2: #f0efec;
+  --text: #0b0b0b;  --text-2: #52514e;  --muted: #898781;
+  --border: rgba(11,11,11,.10);  --grid: #e1e0d9;  --axis: #c3c2b7;
+  --accent: #2a78d6;
+  --viz-1: #2a78d6;  --viz-2: #eb6834;  --viz-3: #1baf7a;  --viz-4: #eda100;
+  --viz-5: #e87ba4;  --viz-6: #008300;  --viz-7: #4a3aa7;  --viz-8: #e34948;
+  --ok: #006300;  --warn: #fab219;  --danger: #d03b3b;
+}

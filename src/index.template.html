@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>CS Interview Prep</title>
+<script>
+/* Early theme application: avoids a flash of the wrong theme before the shell boots.
+   Duplicated (deliberately, minimally) from 14-theme.js so it can run in <head>. */
+(function () {
+  try {
+    var raw = localStorage.getItem("cid.v1.meta");
+    var t = raw ? (JSON.parse(raw) || {}).theme : null;
+    if (t === "auto" || !t) {
+      t = (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark";
+    }
+    document.documentElement.setAttribute("data-theme", t === "light" ? "light" : "dark");
+  } catch (e) { /* file:// can throw on localStorage — dark is the default */ }
+})();
+</script>
+<style>
+/*__CSS__*/
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div id="app" aria-busy="true"></div>
+<script>
+/* NOTE: this script is deliberately NOT in strict mode at the top level — lesson
+   code from 7 independent authors is concatenated in here and must not inherit
+   strictness from the shell. Every shell module opts into "use strict" itself. */
+/*__SHELL__*/
+/*__LESSONS__*/
+if (window.__boot) window.__boot();
+</script>
+</body>
+</html>
