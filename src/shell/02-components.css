@@ -309,3 +309,13 @@ td.mono, .mono { font-family: var(--mono); font-size: 12.5px; }
 }
 tr.speaking { box-shadow: inset 3px 0 0 var(--accent); }
 @media (prefers-reduced-motion: reduce) { .speaking { transition: none; } }
+
+/* Cache policy storyboards: labels convey state without depending on colour. */
+.policy-animation { border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin: 20px 0; background: var(--surface); }
+.policy-animation h4 { margin: 0 0 14px; }
+.policy-slots { display: flex; flex-wrap: wrap; gap: 10px; }
+.policy-slot { flex: 1 1 110px; border: 2px solid var(--border); border-radius: 8px; padding: 16px 10px; text-align: center; white-space: pre-line; font-family: var(--mono); background: var(--surface2); }
+.policy-slot.focused { border-color: var(--accent); outline: 1px solid var(--accent); }
+.policy-animation p { min-height: 4.5em; }
+.policy-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.policy-count { color: var(--muted); font-size: 13px; }

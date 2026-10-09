@@ -21,7 +21,7 @@
   App.TRACK_IDS = App.TRACKS.map(function (t) { return t.id; });
 
   var LANGS = ["python", "sql", "javascript", "pseudo"];
-  var BLOCKS = ["p", "h3", "list", "callout", "code", "image"];
+  var BLOCKS = ["p", "h3", "list", "callout", "code", "image", "steps"];
   var TONES = ["tip", "warn", "pitfall"];
   var KINDS = ["canvas", "svg", "diagram"];
   var PARAM_TYPES = ["int", "float", "enum", "seed", "bool"];
@@ -90,6 +90,19 @@
             if (!b.items.length) err(f + ".items", "must not be empty");
             b.items.forEach(function (it, j) {
               if (!isStr(it)) err(f + ".items[" + j + "]", "expected string, got " + type(it));
+            });
+          }
+        } else if (b.type === "steps") {
+          need(f + ".text", b.text, isStr, "string");
+          if (need(f + ".frames", b.frames, isArr, "frame[]")) {
+            if (!b.frames.length) err(f + ".frames", "must not be empty");
+            b.frames.forEach(function (frame, j) {
+              var ff = f + ".frames[" + j + "]";
+              if (!isObj(frame)) { err(ff, "expected object"); return; }
+              need(ff + ".text", frame.text, isStr, "string");
+              if (need(ff + ".slots", frame.slots, isArr, "string[]")) frame.slots.forEach(function (slot) {
+                if (!isStr(slot)) err(ff + ".slots", "expected strings");
+              });
             });
           }
         } else if (b.type === "image") {

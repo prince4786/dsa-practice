@@ -175,11 +175,52 @@
 
   /* ---- explainer / complexity --------------------------------------------- */
   var TONE_LABEL = { tip: "Tip", warn: "Watch out", pitfall: "Pitfall" };
+  // Small author-defined storyboard: works offline and exposes every step as text.
+  function stepGraphic(b) {
+    var index = 0, timer = null;
+    var slots = h("div", { class: "policy-slots" });
+    var caption = h("p", { "aria-live": "polite" });
+    var count = h("span", { class: "policy-count" });
+    var play = h("button", { class: "btn", onclick: function () {
+      if (timer) { stop(); return; }
+      if (index === b.frames.length - 1) index = 0;
+      play.textContent = "Pause";
+      draw();
+      timer = global.setInterval(function () {
+        if (!card.isConnected) { stop(); return; }
+        index++;
+        draw();
+        if (index === b.frames.length - 1) stop();
+      }, 1800);
+    } }, "Play");
+    function stop() { global.clearInterval(timer); timer = null; play.textContent = "Play"; }
+    var prev = h("button", { class: "btn", onclick: function () { stop(); index = Math.max(0, index - 1); draw(); } }, "Previous");
+    var next = h("button", { class: "btn", onclick: function () { stop(); index = Math.min(b.frames.length - 1, index + 1); draw(); } }, "Next");
+    var card = h("section", { class: "policy-animation", "aria-label": b.text }, [
+      h("h4", null, b.text), slots, caption,
+      h("div", { class: "policy-controls" }, [play, prev, next,
+        h("button", { class: "btn", onclick: function () { stop(); index = 0; draw(); } }, "Restart"), count])
+    ]);
+    function draw() {
+      var f = b.frames[index];
+      clear(slots);
+      f.slots.forEach(function (slot, i) {
+        slots.appendChild(h("div", { class: "policy-slot" + (f.focus === i ? " focused" : "") }, slot));
+      });
+      caption.textContent = f.text;
+      count.textContent = "Step " + (index + 1) + " / " + b.frames.length;
+      prev.disabled = index === 0;
+      next.disabled = index === b.frames.length - 1;
+    }
+    draw();
+    return card;
+  }
   function renderExplainer(blocks) {
     var out = [];
     (blocks || []).forEach(function (b) {
       if (!b || typeof b !== "object") return;
       switch (b.type) {
+        case "steps": out.push(stepGraphic(b)); break;
         case "image": out.push(h("img", { src: b.src, alt: b.text, style: "display:block;width:100%;height:auto;margin:24px 0" })); break;
         case "h3": out.push(md("h3", b.text)); break;
         case "p": out.push(md("p", b.text)); break;
