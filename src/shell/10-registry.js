@@ -21,7 +21,7 @@
   App.TRACK_IDS = App.TRACKS.map(function (t) { return t.id; });
 
   var LANGS = ["python", "sql", "javascript", "pseudo"];
-  var BLOCKS = ["p", "h3", "list", "callout", "code"];
+  var BLOCKS = ["p", "h3", "list", "callout", "code", "image"];
   var TONES = ["tip", "warn", "pitfall"];
   var KINDS = ["canvas", "svg", "diagram"];
   var PARAM_TYPES = ["int", "float", "enum", "seed", "bool"];
@@ -92,6 +92,10 @@
               if (!isStr(it)) err(f + ".items[" + j + "]", "expected string, got " + type(it));
             });
           }
+        } else if (b.type === "image") {
+          need(f + ".src", b.src, isStr, "string");
+          need(f + ".text", b.text, isStr, "string");
+          if (isStr(b.src) && !/^data:image\/svg\+xml[,;]/.test(b.src)) err(f + ".src", "expected embedded SVG image");
         } else if (b.type === "code") {
           need(f + ".code", b.code, isStr, "string");
           if (b.lang != null && !isStr(b.lang)) err(f + ".lang", "expected string, got " + type(b.lang));

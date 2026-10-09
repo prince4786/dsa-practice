@@ -180,6 +180,7 @@
     (blocks || []).forEach(function (b) {
       if (!b || typeof b !== "object") return;
       switch (b.type) {
+        case "image": out.push(h("img", { src: b.src, alt: b.text, style: "display:block;width:100%;height:auto;margin:24px 0" })); break;
         case "h3": out.push(md("h3", b.text)); break;
         case "p": out.push(md("p", b.text)); break;
         case "list":
