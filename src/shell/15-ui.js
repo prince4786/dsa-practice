@@ -240,12 +240,19 @@
     return out;
   }
 
-  function complexityTable(cx) {
+  /* A track may rename a lesson section (its `labels` in 10-registry.js). */
+  function sectionLabel(track, id, dflt) {
+    var t = App.trackMeta(track);
+    return (t && t.labels && t.labels[id]) || dflt;
+  }
+
+  function complexityTable(cx, track) {
     if (!cx || !cx.rows || !cx.rows.length) return null;
     var hasNote = cx.rows.some(function (r) { return r.note; });
+    var cols = sectionLabel(track, "complexityCols", ["Operation", "Time", "Space"]);
     return h("div", { class: "table-wrap" }, h("table", null, [
       h("thead", null, h("tr", null, [
-        h("th", null, "Operation"), h("th", null, "Time"), h("th", null, "Space"),
+        h("th", null, cols[0]), h("th", null, cols[1]), h("th", null, cols[2]),
         hasNote ? h("th", null, "Note") : null
       ])),
       h("tbody", null, cx.rows.map(function (r) {
@@ -564,7 +571,7 @@
         e.preventDefault();
         var el = doc.getElementById("sec-" + s.id);
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-      } }, s.label);
+      } }, sectionLabel(l.track, s.id + "Tab", sectionLabel(l.track, s.id, s.label)));
     })));
 
     kids.push(h("div", { class: "page-head narrow", style: { marginTop: "18px" } }, [
@@ -607,8 +614,8 @@
     /* --- complexity --- */
     if (l.complexity && l.complexity.rows && l.complexity.rows.length) {
       kids.push(h("div", { class: "section narrow", id: "sec-complexity" }, [
-        h("h2", null, "Complexity"),
-        complexityTable(l.complexity)
+        h("h2", null, sectionLabel(l.track, "complexity", "Complexity")),
+        complexityTable(l.complexity, l.track)
       ]));
     }
 
@@ -620,14 +627,14 @@
 
     /* --- interview --- */
     kids.push(h("div", { class: "section narrow", id: "sec-interview" }, [
-      h("h2", null, "Why interviewers ask this"),
+      h("h2", null, sectionLabel(l.track, "interview", "Why interviewers ask this")),
       h("div", { class: "prose" }, md("p", (l.interview && l.interview.whyAsked) || ""))
     ]));
 
     /* --- follow-ups --- */
     if (l.interview && l.interview.followUps && l.interview.followUps.length) {
       kids.push(h("div", { class: "section narrow", id: "sec-followups" }, [
-        h("h2", null, "Follow-ups"),
+        h("h2", null, sectionLabel(l.track, "followups", "Follow-ups")),
         l.interview.followUps.map(function (fu) {
           return h("details", { class: "qa" }, [
             h("summary", null, md("span", fu.q)),
@@ -828,7 +835,7 @@
     var rows = [
       ["/  or  ⌘K", "Search lessons"],
       ["?", "This help"],
-      ["g then 1–7", "Jump to a track"],
+      ["g then 1–8", "Jump to a track"],
       ["g then h", "Home"],
       ["g then d", "Drill queue"],
       ["[  ]", "Previous / next lesson"],

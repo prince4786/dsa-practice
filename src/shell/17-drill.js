@@ -378,7 +378,7 @@
           h("h2", null, "Self-check — " + l.title),
           h("div", { class: "prose" }, App.UI.renderExplainer(l.explainer)),
           l.complexity && l.complexity.rows && l.complexity.rows.length
-            ? h("div", { style: { marginTop: "16px" } }, App.UI.complexityTable(l.complexity)) : null,
+            ? h("div", { style: { marginTop: "16px" } }, App.UI.complexityTable(l.complexity, l.track)) : null,
           h("div", { class: "btn-row", style: { marginTop: "16px" } }, [
             h("a", { class: "btn", href: App.Router.lessonHash(l) }, "Open the full lesson")
           ])

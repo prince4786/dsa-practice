@@ -16,7 +16,15 @@
     { id: "rl",        label: "Reinforcement Learning", short: "RL" },
     { id: "agents",    label: "LLM Agents",             short: "AG" },
     { id: "ai",        label: "AI Foundations",         short: "AI" },
-    { id: "sysdesign", label: "System Design",          short: "SD" }
+    { id: "sysdesign", label: "System Design",          short: "SD" },
+    { id: "startup",   label: "Startup & Business",     short: "SU",
+      // Business lessons are not interview prep: the same lesson fields render
+      // under these headings instead (see sectionLabel in 15-ui.js).
+      labels: {
+        complexity: "Key numbers", complexityCols: ["Metric", "Healthy", "Great"],
+        interview: "Why it matters for Theoma", interviewTab: "For Theoma",
+        followups: "Questions you'll get asked"
+      } }
   ];
   App.TRACK_IDS = App.TRACKS.map(function (t) { return t.id; });
 

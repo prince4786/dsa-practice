@@ -1,6 +1,6 @@
 # CS Interview Prep Dashboard
 
-A single, self-contained `dist/index.html` — 7 tracks of interview lessons, each with a
+A single, self-contained `dist/index.html` — 7 tracks of interview lessons plus a Startup & Business track, each with a
 step-through visualizer, a spaced-repetition drill, and a 60-second explain mode.
 Vanilla HTML/CSS/JS, zero dependencies, no network access at runtime: it opens straight
 from `file://` under a strict CSP.
@@ -36,7 +36,7 @@ lets seven authors work in parallel without touching a shared file.
 
 ## Adding a lesson
 
-Create `src/topics/<track>/<NN>-<lesson-id>.js` (track ∈ `dsa db ml rl agents ai sysdesign`)
+Create `src/topics/<track>/<NN>-<lesson-id>.js` (track ∈ `dsa db ml rl agents ai sysdesign startup`)
 containing **exactly one statement** — `export default { … }` — and **zero imports**.
 `id` must equal the filename minus the `NN-` prefix, and `track` must equal the directory.
 See `REFERENCE-LESSON.js` for the canonical shape and `SPEC.md` §2–§3 for the full contract.
@@ -70,7 +70,7 @@ Things the shell guarantees, so you don't write them:
 |---|---|
 | `/` or `⌘K` / `Ctrl+K` | Command palette — fuzzy search over lesson titles and tags |
 | `?` | Shortcut overlay |
-| `g` then `1`–`7` | Jump to a track |
+| `g` then `1`–`8` | Jump to a track |
 | `g` then `h` / `d` | Home / Drill |
 | `[` `]` | Previous / next lesson |
 | `t` | Toggle theme |
