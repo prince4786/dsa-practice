@@ -14,7 +14,9 @@ node build.js --no-smoke    # skip the build-time generator dry-run
 node build.js --quiet       # summary only
 ```
 
-Output: **`dist/index.html`**. Open it directly in a browser (double-click, or
+Outputs: **`dist/index.html`** and **`docs/index.html`** (the GitHub Pages entry point).
+Commit `docs/index.html` with source changes to publish the updated site.
+Open `dist/index.html` directly in a browser (double-click, or
 `open dist/index.html`). Nothing else is generated and nothing is fetched at runtime.
 
 The build:

@@ -292,6 +292,10 @@ function main() {
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
   fs.writeFileSync(OUT, html, "utf8");
+  // GitHub Pages serves main:/docs; keep its committed entry point in sync.
+  const pagesDir = path.join(ROOT, "docs");
+  fs.mkdirSync(pagesDir, { recursive: true });
+  fs.writeFileSync(path.join(pagesDir, "index.html"), html, "utf8");
 
   /* ---- optional --artifact target -----------------------------------------
      Hosts like Claude Artifacts wrap the uploaded file in their own
